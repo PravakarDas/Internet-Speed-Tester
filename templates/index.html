@@ -1,92 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Internet Speed Tester</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <title>WiFi Speed Tester</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    h1 {
+      text-align: center;
+    }
+    .controls {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .progress, .elapsed {
+      font-weight: bold;
+      margin: 10px;
+    }
+    table {
+      margin: 0 auto;
+      border-collapse: collapse;
+      width: 95%;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+    }
+  </style>
 </head>
-<body class="flex flex-col min-h-screen bg-gray-100 text-gray-800">
-    <!-- Navbar -->
-    <header class="bg-blue-600 text-white p-4 shadow">
-        <div class="container mx-auto text-xl font-bold">
-            Internet Speed Tester
-        </div>
-    </header>
+<body>
+  <h1>WiFi Speed Tester</h1>
 
-    <!-- Main Content -->
-    <main class="flex-grow container mx-auto p-4">
-        <h2 class="text-2xl font-semibold mb-4">Set Test Parameters</h2>
-        <form id="test-form" class="bg-white shadow-md rounded-lg p-6 space-y-4">
-            <div>
-                <label for="duration" class="block font-medium">Test Duration (in minutes):</label>
-                <input type="number" id="duration" name="duration" min="1" required class="mt-1 w-full border p-2 rounded-md" />
-            </div>
+  <div class="controls">
+    <label for="duration">Test Duration (seconds): </label>
+    <input type="number" id="duration" value="30" min="5">
+    <br><br>
+    <button onclick="startTest()">Start Test</button>
+    <button onclick="stopTest()">Stop Test</button>
+    <button onclick="downloadResults()">Download CSV</button>
+    <div class="progress">Progress: <span id="progress">0%</span></div>
+    <div class="elapsed">Elapsed Time: <span id="elapsed">0s</span></div>
+  </div>
 
-            <div>
-                <label for="checks" class="block font-medium">Number of Checks:</label>
-                <input type="number" id="checks" name="checks" min="1" required class="mt-1 w-full border p-2 rounded-md" />
-            </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>Download (Mbps)</th>
+        <th>Upload (Mbps)</th>
+        <th>Ping (ms)</th>
+        <th>IP Address</th>
+      </tr>
+    </thead>
+    <tbody id="resultTable">
+    </tbody>
+  </table>
 
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                Start Test
-            </button>
-        </form>
+  <script>
+    let intervalId = null;
 
-        <!-- Results Table -->
-        <div id="results" class="mt-8 hidden">
-            <h3 class="text-xl font-bold mb-4">Test Results</h3>
-            <table class="min-w-full border-collapse border border-gray-300">
-                <thead class="bg-gray-200">
-                    <tr>
-                        <th class="border border-gray-300 p-2">Time</th>
-                        <th class="border border-gray-300 p-2">Download (Mbps)</th>
-                        <th class="border border-gray-300 p-2">Upload (Mbps)</th>
-                        <th class="border border-gray-300 p-2">Ping (ms)</th>
-                    </tr>
-                </thead>
-                <tbody id="results-body">
-                    <!-- Real-time data rows inserted here -->
-                </tbody>
-            </table>
-        </div>
-    </main>
+    function startTest() {
+      const duration = document.getElementById("duration").value;
 
-    <!-- Footer -->
-    <footer class="bg-gray-800 text-white text-center py-4">
-        Developed by Pravakar Das &copy; 2025
-    </footer>
+      fetch("/start_test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ duration: duration })
+      })
+      .then(() => {
+        clearInterval(intervalId);
+        document.getElementById("progress").innerText = "0%";
+        document.getElementById("elapsed").innerText = "0s";
+        document.getElementById("resultTable").innerHTML = "";
+        intervalId = setInterval(fetchStatus, 1000);
+      });
+    }
 
-    <script>
-        const form = document.getElementById('test-form');
-        const resultsSection = document.getElementById('results');
-        const resultsBody = document.getElementById('results-body');
+    function fetchStatus() {
+      fetch("/get_status")
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById("progress").innerText = data.progress + "%";
+          document.getElementById("elapsed").innerText = data.elapsed_time + "s";
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            resultsSection.classList.remove('hidden');
-            resultsBody.innerHTML = ''; // Clear previous results
+          const table = document.getElementById("resultTable");
+          table.innerHTML = "";
+          data.data.forEach(entry => {
+            const row = `<tr>
+                          <td>${entry.timestamp}</td>
+                          <td>${entry.download}</td>
+                          <td>${entry.upload}</td>
+                          <td>${entry.ping}</td>
+                          <td>${entry.ip}</td>
+                        </tr>`;
+            table.innerHTML += row;
+          });
 
-            const duration = document.getElementById('duration').value;
-            const checks = document.getElementById('checks').value;
-
-            const res = await fetch('/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ duration, checks })
-            });
-
-            const data = await res.json();
-
-            data.results.forEach(entry => {
-                const row = `<tr>
-                    <td class="border border-gray-300 p-2">${entry.time}</td>
-                    <td class="border border-gray-300 p-2">${entry.download}</td>
-                    <td class="border border-gray-300 p-2">${entry.upload}</td>
-                    <td class="border border-gray-300 p-2">${entry.ping}</td>
-                </tr>`;
-                resultsBody.innerHTML += row;
-            });
+          if (data.status === "completed") {
+            clearInterval(intervalId);
+          }
         });
-    </script>
+    }
+
+    function stopTest() {
+      fetch("/stop_test").then(() => clearInterval(intervalId));
+    }
+
+    function downloadResults() {
+      window.location.href = "/download";
+    }
+  </script>
 </body>
 </html>

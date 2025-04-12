@@ -1,61 +1,130 @@
-from flask import Flask, render_template, request, jsonify
-from datetime import datetime
-import speedtest
-from ping3 import ping
-import statistics
+from flask import Flask, render_template, jsonify, request, send_file
+import threading
 import time
+import csv
+import os
+import speedtest
+import random
+from datetime import datetime
+import requests
 
 app = Flask(__name__)
+test_data = []
+is_testing = False
+lock = threading.Lock()
+test_duration = 0
+start_time = 0
 
-def get_ping_and_jitter(host="google.com", count=5):
-    pings = []
-    for _ in range(count):
-        delay = ping(host, unit='ms')
-        if delay is not None:
-            pings.append(delay)
-        time.sleep(0.2)  # slight delay between pings
-
-    if not pings:
-        return {"ping": None, "jitter": None}
-
-    jitter = statistics.stdev(pings) if len(pings) > 1 else 0
-    return {
-        "ping": round(statistics.mean(pings), 2),
-        "jitter": round(jitter, 2)
-    }
 
 @app.route('/')
-def home():
+def index():
     return render_template('index.html')
 
-@app.route('/start', methods=['POST'])
+
+@app.route('/start_test', methods=['POST'])
 def start_test():
+    global is_testing, test_data, test_duration, start_time
+
     data = request.get_json()
-    duration = int(data.get('duration', 1))  # currently unused
-    checks = int(data.get('checks', 1))
+    test_duration = int(data.get('duration', 30))
+    with lock:
+        test_data = []
+        is_testing = True
+        start_time = time.time()
 
-    results = []
-    for _ in range(checks):
-        # Perform speedtest
-        st = speedtest.Speedtest()
-        st.get_best_server()
-        download_speed = round(st.download() / 1_000_000, 2)  # in Mbps
-        upload_speed = round(st.upload() / 1_000_000, 2)      # in Mbps
+    threading.Thread(target=run_test).start()
+    return jsonify({"status": "started"})
 
-        # Get ping and jitter
-        ping_data = get_ping_and_jitter()
 
-        result = {
-            "time": datetime.now().strftime("%H:%M:%S"),
-            "download": download_speed,
-            "upload": upload_speed,
-            "ping": ping_data["ping"],
-            "jitter": ping_data["jitter"]
-        }
+def run_test():
+    global is_testing
+    while True:
+        with lock:
+            if not is_testing or (time.time() - start_time) >= test_duration:
+                is_testing = False
+                break
 
-        results.append(result)
+        # Perform test
+        try:
+            st = speedtest.Speedtest()
+            st.get_best_server()
+            download = round(st.download() / 1_000_000, 2)
+            upload = round(st.upload() / 1_000_000, 2)
+            ping = round(st.results.ping, 2)
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    return jsonify({"results": results})
+            # Get public IP
+            try:
+                ip_address = requests.get('https://api.ipify.org').text
+            except:
+                ip_address = "Unavailable"
+
+            result = {
+                "timestamp": timestamp,
+                "download": download,
+                "upload": upload,
+                "ping": ping,
+                "ip": ip_address
+            }
+
+            with lock:
+                test_data.append(result)
+
+        except Exception as e:
+            with lock:
+                test_data.append({
+                    "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    "download": "Error",
+                    "upload": "Error",
+                    "ping": "Error",
+                    "ip": "Unavailable"
+                })
+
+        time.sleep(random.randint(2, 5))  # Random sleep between 2 to 5 seconds
+
+
+@app.route('/get_status')
+def get_status():
+    with lock:
+        if not is_testing:
+            return jsonify({
+                "status": "completed",
+                "data": test_data,
+                "progress": 100,
+                "elapsed_time": int(time.time() - start_time)
+            })
+
+        elapsed = int(time.time() - start_time)
+        progress = min(int((elapsed / test_duration) * 100), 100)
+        return jsonify({
+            "status": "running",
+            "data": test_data,
+            "progress": progress,
+            "elapsed_time": elapsed
+        })
+
+
+@app.route('/stop_test')
+def stop_test():
+    global is_testing
+    with lock:
+        is_testing = False
+    return jsonify({"status": "stopped"})
+
+
+@app.route('/download')
+def download():
+    filename = 'test_results.csv'
+    filepath = os.path.join(os.getcwd(), filename)
+
+    with open(filepath, 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=["timestamp", "download", "upload", "ping", "ip"])
+        writer.writeheader()
+        for row in test_data:
+            writer.writerow(row)
+
+    return send_file(filepath, as_attachment=True)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
