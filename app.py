@@ -18,6 +18,11 @@ start_time = 0
 
 @app.route('/')
 def index():
+    # Auto-delete test_results.csv if it exists
+    csv_path = os.path.join(os.getcwd(), 'test_results.csv')
+    if os.path.exists(csv_path):
+        os.remove(csv_path)
+
     return render_template('index.html')
 
 
