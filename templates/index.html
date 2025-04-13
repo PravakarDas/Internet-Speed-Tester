@@ -1,285 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>WiFi Speed Tester</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #eef2f3;
-      margin: 0;
-      padding: 20px;
-    }
+  <head>
+    <meta charset="UTF-8">
+    <title>WiFi Speed Tester</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <h1>🚀 WiFi Speed Tester</h1>
 
-    h1 {
-      text-align: center;
-      color: #333;
-      margin-bottom: 30px;
-    }
+    <div class="card">
+      <div class="controls">
+        <label for="duration">Test Duration (seconds):</label>
+        <input type="number" id="duration" value="30" min="5"><br><br>
 
-    .card {
-      max-width: 1000px;
-      margin: 0 auto;
-      background: #fff;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
-    }
+        <label for="frequency">Test Frequency:</label>
+        <select id="frequency">
+          <option value="normal" selected>Normal</option>
+          <option value="fast">Fast</option>
+          <option value="slow">Slow</option>
+        </select><br><br>
 
-    .controls {
-      text-align: center;
-      margin-bottom: 30px;
-    }
+        <button onclick="startTest()">Start Test</button>
+        <button onclick="stopTest()">Stop Test</button>
+        <button onclick="downloadResults()">Download CSV</button>
 
-    label {
-      font-weight: 500;
-      font-size: 16px;
-    }
-
-    input[type="number"] {
-      padding: 5px 10px;
-      margin-left: 10px;
-      width: 80px;
-      font-size: 14px;
-    }
-
-    button {
-      padding: 10px 20px;
-      margin: 10px 5px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      background: #007bff;
-      color: white;
-      font-size: 14px;
-      transition: 0.3s ease;
-    }
-
-    button:hover {
-      background: #0056b3;
-    }
-
-    .status-info {
-      margin-top: 15px;
-      font-weight: bold;
-      color: #555;
-    }
-
-    .charts {
-      display: flex;
-      justify-content: center;
-      margin: 30px 0;
-    }
-
-    canvas {
-      width: 100% !important;
-      height: 350px !important;
-      background: #fff;
-      border: 1px solid #ddd;
-      padding: 15px;
-      border-radius: 8px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      font-size: 14px;
-    }
-
-    th, td {
-      border: 1px solid #ccc;
-      padding: 10px 12px;
-      text-align: center;
-    }
-
-    th {
-      background-color: #007bff;
-      color: white;
-    }
-
-    tr:nth-child(even) {
-      background-color: #f9f9f9;
-    }
-
-    @media (max-width: 768px) {
-      canvas {
-        width: 100% !important;
-        height: 300px !important;
-      }
-
-      .card {
-        padding: 15px;
-      }
-
-      button {
-        width: 100%;
-        margin: 8px 0;
-      }
-    }
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
-
-  <h1>🚀 WiFi Speed Tester</h1>
-
-  <div class="card">
-
-    <div class="controls">
-      <label for="duration">Test Duration (seconds):</label>
-      <input type="number" id="duration" value="30" min="5">
-      <br><br>
-      <button onclick="startTest()">Start Test</button>
-      <button onclick="stopTest()">Stop Test</button>
-      <button onclick="downloadResults()">Download CSV</button>
-      <div class="status-info">
-        <div>Progress: <span id="progress">0%</span></div>
-        <div>Elapsed Time: <span id="elapsed">0s</span></div>
+        <div class="status-info">
+          <div>Progress: <span id="progress">0%</span></div>
+          <div>Elapsed Time: <span id="elapsed">0s</span></div>
+        </div>
       </div>
+
+      <div class="charts">
+        <canvas id="combinedChart"></canvas>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Download (Mbps)</th>
+            <th>Upload (Mbps)</th>
+            <th>Ping (ms)</th>
+            <th>IP Address</th>
+          </tr>
+        </thead>
+        <tbody id="resultTable"></tbody>
+      </table>
     </div>
 
-    <div class="charts">
-      <canvas id="combinedChart"></canvas>
-    </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Timestamp</th>
-          <th>Download (Mbps)</th>
-          <th>Upload (Mbps)</th>
-          <th>Ping (ms)</th>
-          <th>IP Address</th>
-        </tr>
-      </thead>
-      <tbody id="resultTable">
-      </tbody>
-    </table>
-  </div>
-
-  <script>
-    let intervalId = null;
-
-    const combinedChart = new Chart(document.getElementById('combinedChart').getContext('2d'), {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [
-          {
-            label: 'Download (Mbps)',
-            data: [],
-            borderColor: 'green',
-            fill: false,
-            tension: 0.3
-          },
-          {
-            label: 'Upload (Mbps)',
-            data: [],
-            borderColor: 'blue',
-            fill: false,
-            tension: 0.3
-          },
-          {
-            label: 'Ping (ms)',
-            data: [],
-            borderColor: 'red',
-            fill: false,
-            tension: 0.3
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: {
-          mode: 'index',
-          intersect: false
-        },
-        scales: {
-          x: {
-            title: {
-              display: true,
-              text: 'Timestamp'
-            }
-          },
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: 'Value'
-            }
-          }
-        }
-      }
-    });
-
-    function startTest() {
-      const duration = document.getElementById("duration").value;
-
-      fetch("/start_test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ duration: duration })
-      }).then(() => {
-        clearInterval(intervalId);
-        document.getElementById("progress").innerText = "0%";
-        document.getElementById("elapsed").innerText = "0s";
-        document.getElementById("resultTable").innerHTML = "";
-        resetChart();
-        intervalId = setInterval(fetchStatus, 1000);
-      });
-    }
-
-    function fetchStatus() {
-      fetch("/get_status")
-        .then(response => response.json())
-        .then(data => {
-          document.getElementById("progress").innerText = data.progress + "%";
-          document.getElementById("elapsed").innerText = data.elapsed_time + "s";
-
-          const table = document.getElementById("resultTable");
-          table.innerHTML = "";
-          resetChart();
-
-          data.data.forEach(entry => {
-            const row = `<tr>
-                          <td>${entry.timestamp}</td>
-                          <td>${entry.download}</td>
-                          <td>${entry.upload}</td>
-                          <td>${entry.ping}</td>
-                          <td>${entry.ip}</td>
-                        </tr>`;
-            table.innerHTML += row;
-
-            if (entry.download !== "Error") {
-              combinedChart.data.labels.push(entry.timestamp);
-              combinedChart.data.datasets[0].data.push(entry.download);
-              combinedChart.data.datasets[1].data.push(entry.upload);
-              combinedChart.data.datasets[2].data.push(entry.ping);
-            }
-          });
-
-          combinedChart.update();
-
-          if (data.status === "completed") {
-            clearInterval(intervalId);
-          }
-        });
-    }
-
-    function stopTest() {
-      fetch("/stop_test").then(() => clearInterval(intervalId));
-    }
-
-    function downloadResults() {
-      window.location.href = "/download";
-    }
-
-    function resetChart() {
-      combinedChart.data.labels = [];
-      combinedChart.data.datasets.forEach(dataset => dataset.data = []);
-    }
-  </script>
-</body>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+  </body>
 </html>
