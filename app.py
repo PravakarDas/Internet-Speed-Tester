@@ -14,6 +14,7 @@ is_testing = False
 lock = threading.Lock()
 test_duration = 0
 start_time = 0
+test_frequency = "normal"
 
 
 @app.route('/')
@@ -28,10 +29,11 @@ def index():
 
 @app.route('/start_test', methods=['POST'])
 def start_test():
-    global is_testing, test_data, test_duration, start_time
+    global is_testing, test_data, test_duration, start_time, test_frequency
 
     data = request.get_json()
     test_duration = int(data.get('duration', 30))
+    test_frequency = data.get('frequency', 'normal')
     with lock:
         test_data = []
         is_testing = True
@@ -85,7 +87,15 @@ def run_test():
                     "ip": "Unavailable"
                 })
 
-        time.sleep(random.randint(2, 5))  # Random sleep between 2 to 5 seconds
+        if test_frequency == "fast":
+            sleep_time = 1
+        elif test_frequency == "slow":
+            sleep_time = 5
+        else:
+            sleep_time = 3
+
+        time.sleep(sleep_time)
+
 
 
 @app.route('/get_status')
