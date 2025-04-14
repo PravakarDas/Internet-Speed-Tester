@@ -120,3 +120,8 @@ function resetChart() {
     combinedChart.data.labels = [];
     combinedChart.data.datasets.forEach(dataset => dataset.data = []);
 }
+
+function generatePDF() {
+    window.location.href = "/generate_pdf";
+}
+
