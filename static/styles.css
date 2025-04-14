@@ -1,43 +1,47 @@
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #eef2f3;
+    background: linear-gradient(to right, #eef2f3, #dfe9f3);
     margin: 0;
     padding: 20px;
-}
-
-h1 {
+  }
+  
+  h1 {
     text-align: center;
     color: #333;
     margin-bottom: 30px;
-}
-
-.card {
+    font-size: 2.2em;
+  }
+  
+  .card {
     max-width: 1000px;
     margin: 0 auto;
     background: #fff;
     padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
-}
-
-.controls {
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    animation: fadeIn 1s ease-in-out;
+  }
+  
+  .controls {
     text-align: center;
     margin-bottom: 30px;
-}
-
-label {
+  }
+  
+  label {
     font-weight: 500;
     font-size: 16px;
-}
-
-input[type="number"] {
-    padding: 5px 10px;
+  }
+  
+  input[type="number"],
+  select {
+    padding: 6px 10px;
     margin-left: 10px;
-    width: 80px;
     font-size: 14px;
-}
-
-button {
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
+  
+  button {
     padding: 10px 20px;
     margin: 10px 5px;
     border: none;
@@ -47,67 +51,96 @@ button {
     color: white;
     font-size: 14px;
     transition: 0.3s ease;
-}
-
-button:hover {
+  }
+  
+  button:hover {
     background: #0056b3;
-}
-
-.status-info {
+  }
+  
+  .status-info {
     margin-top: 15px;
     font-weight: bold;
     color: #555;
-}
-
-.charts {
+  }
+  
+  .charts {
     display: flex;
     justify-content: center;
     margin: 30px 0;
-}
-
-canvas {
+  }
+  
+  canvas {
     width: 100% !important;
     height: 350px !important;
     background: #fff;
     border: 1px solid #ddd;
     padding: 15px;
     border-radius: 8px;
-}
-
-table {
+  }
+  
+  table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
     font-size: 14px;
-}
-
-th, td {
+  }
+  
+  th, td {
     border: 1px solid #ccc;
     padding: 10px 12px;
     text-align: center;
-}
-
-th {
+  }
+  
+  th {
     background-color: #007bff;
     color: white;
-}
-
-tr:nth-child(even) {
+  }
+  
+  tr:nth-child(even) {
     background-color: #f9f9f9;
-}
-
-@media (max-width: 768px) {
-    canvas {
-    width: 100% !important;
-    height: 300px !important;
-    }
-
+  }
+  
+  footer {
+    text-align: center;
+    margin-top: 30px;
+    font-size: 14px;
+    color: #333;
+  }
+  
+  footer a {
+    text-decoration: none;
+    color: #007bff;
+    margin: 0 5px;
+  }
+  
+  footer a:hover {
+    text-decoration: underline;
+  }
+  
+  @media (max-width: 768px) {
     .card {
-    padding: 15px;
+      padding: 15px;
     }
-
+  
     button {
-    width: 100%;
-    margin: 8px 0;
+      width: 100%;
+      margin: 8px 0;
     }
-}
+  
+    canvas {
+      height: 300px !important;
+    }
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+  
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
