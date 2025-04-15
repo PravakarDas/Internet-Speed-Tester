@@ -65,7 +65,6 @@ Internet-Speed-Tester/
 │   └── index.html       # Front-end layout using Jinja2
 │
 ├── app.py               # Core Flask app
-├── run.py               # Entry point for running the server
 ├── requirements.txt     # Python dependencies
 └── README.md            # Project documentation
 ```
