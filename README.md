@@ -68,6 +68,8 @@ Internet-Speed-Tester/
 ├── run.py               # Entry point for running the server
 ├── requirements.txt     # Python dependencies
 └── README.md            # Project documentation
+```
+
 ## ⚙️ Setup Instructions  
 
 ### 1. Clone the Repository  
@@ -77,12 +79,12 @@ cd Internet-Speed-Tester
 # On Windows
 python -m venv env
 env\Scripts\activate
-
 # On macOS/Linux
 python3 -m venv env
 source env/bin/activate
 pip install -r requirements.txt
 python run.py
+```
 Now open your browser and go to 👉 http://127.0.0.1:5000
 
 ## 🧾 Dependencies
